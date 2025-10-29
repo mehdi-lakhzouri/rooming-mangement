@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
-import { Users } from 'lucide-react';
+import { Users, Eye } from 'lucide-react';
 import { Room } from '../lib/api';
 import JoinRoomModal from './JoinRoomModal';
 import { cn } from '../lib/utils';
@@ -43,91 +43,77 @@ export default function RoomCard({ room }: RoomCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow min-w-[320px]">
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow min-w-[320px]">
+      {/* Header with room name and gender badge */}
       <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{room.name}</h3>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                'px-2 py-1 rounded-full text-xs font-medium border',
-                getGenderColor(room.gender)
-              )}
-            >
-              {room.gender}
-            </span>
-            <span
-              className={cn(
-                'px-2 py-1 rounded-full text-xs font-medium',
-                isFull
-                  ? 'bg-red-100 text-red-800 border border-red-200'
-                  : 'bg-green-100 text-green-800 border border-green-200'
-              )}
-            >
-              {isFull ? 'Full' : 'Available'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Users className="h-4 w-4 text-gray-500" />
-          <span className="text-sm text-gray-600">
-            {room.members.length} / {room.capacity} people
-          </span>
-        </div>
-        <div className="relative">
-          <Progress 
-            value={occupancyRate} 
-            className="h-2" 
-          />
-          <div 
-            className={cn(
-              "absolute top-0 left-0 h-2 rounded-full transition-all",
-              getGenderProgressColor(room.gender)
-            )}
-            style={{ width: `${occupancyRate}%` }}
-          />
-        </div>
-        <span className="text-xs text-gray-500 mt-1">
-          {Math.round(occupancyRate)}% occupied
+        <h3 className="text-xl font-bold text-gray-900">{room.name}</h3>
+        <span
+          className={cn(
+            'px-3 py-1 rounded-full text-sm font-medium',
+            room.gender === 'MALE' ? 'bg-blue-100 text-blue-600' :
+            room.gender === 'FEMALE' ? 'bg-pink-100 text-pink-600' :
+            'bg-purple-100 text-purple-600'
+          )}
+        >
+          {room.gender === 'MALE' ? 'Male' : room.gender === 'FEMALE' ? 'Female' : 'Mixed'}
         </span>
       </div>
 
-      <div className="flex gap-2">
-        <JoinRoomModal
-          roomId={room.id}
-          roomName={room.name}
-          disabled={isFull}
-        >
-          <Button 
-            className="flex-1" 
-            disabled={isFull}
-            variant={isFull ? "outline" : "default"}
-          >
-            {isFull ? 'Room Full' : 'Join Room'}
-          </Button>
-        </JoinRoomModal>
-        <Link href={`/room/${room.id}`}>
-          <Button variant="outline" size="sm">
-            View
-          </Button>
-        </Link>
+      {/* Capacity */}
+      <div className="mb-4">
+        <p className="text-gray-500 text-sm">Capacity: {room.capacity}</p>
       </div>
 
+      {/* Occupancy Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-700">Occupancy</span>
+          <span className={cn(
+            "text-sm font-bold",
+            isFull ? "text-red-600" : "text-green-600"
+          )}>
+            {isFull ? 'Full' : 'Available'}
+          </span>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="relative mb-2">
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              className={cn(
+                "h-3 rounded-full transition-all duration-300",
+                isFull ? "bg-red-500" : "bg-green-500"
+              )}
+              style={{ width: `${occupancyRate}%` }}
+            />
+          </div>
+        </div>
+        
+        <p className="text-sm text-gray-500">{room.members.length} / {room.capacity} members</p>
+      </div>
+
+      {/* Members Section */}
       {room.members.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Members</h4>
-          <div className="space-y-2 max-h-48 overflow-auto pr-2">
+        <div className="mb-6">
+          <div className="flex items-center gap-1 mb-3">
+            <Users className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Members</span>
+          </div>
+          <div className="space-y-2">
             {room.members.map((member) => {
               const initials = `${member.user.firstname.charAt(0)}${member.user.lastname.charAt(0)}`.toUpperCase();
+              const bgColor = room.gender === 'MALE' ? 'bg-blue-500' : 
+                             room.gender === 'FEMALE' ? 'bg-pink-500' : 'bg-purple-500';
+              
               return (
-                <div key={member.id} className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-linear-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                <div key={member.id} className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0",
+                    bgColor
+                  )}>
                     {initials}
                   </div>
-                  <span className="text-xs text-gray-600">
+                  <span className="text-sm text-gray-600">
                     {member.user.firstname} {member.user.lastname}
                   </span>
                 </div>
@@ -136,6 +122,34 @@ export default function RoomCard({ room }: RoomCardProps) {
           </div>
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-between">
+        <JoinRoomModal
+          roomId={room.id}
+          roomName={room.name}
+          disabled={isFull}
+        >
+          <Button 
+            className="flex-1 mr-4" 
+            disabled={isFull}
+            variant={isFull ? "outline" : "default"}
+          >
+            {isFull ? 'Room Full' : 'Join Room'}
+          </Button>
+        </JoinRoomModal>
+        
+        <Link href={`/room/${room.id}`}>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+          >
+            <Eye className="h-4 w-4" />
+            <span>View</span>
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
