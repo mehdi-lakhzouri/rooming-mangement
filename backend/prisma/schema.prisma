@@ -10,8 +10,10 @@ datasource db {
 model Sheet {
   id        String   @id @default(cuid())
   name      String   @unique
+  code      String   @unique
   rooms     Room[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Room {
@@ -48,5 +50,4 @@ model RoomMember {
 enum Gender {
   MALE
   FEMALE
-  MIXED
 }

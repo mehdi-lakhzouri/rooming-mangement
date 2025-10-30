@@ -9,13 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../../../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Badge } from '../../../components/ui/badge';
-import { Plus, Edit, Trash2, Building, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, Users, Loader2 } from 'lucide-react';
 import { useRoomStore } from '../../../store/useRoomStore';
-import { sheetsApi, Sheet } from '../../../lib/api';
+import { sheetsApi, Sheet, Room } from '../../../lib/api';
 import { toast } from 'sonner';
+import CopyCodeButton from '../../../components/CopyCodeButton';
 import SearchBar from '../../../components/SearchBar';
 import Pagination from '../../../components/Pagination';
 import FilterBar from '../../../components/FilterBar';
+import RowsPerPageSelector from '../../../components/RowsPerPageSelector';
+import SmartRoomCreationDialog from '../../../components/SmartRoomCreationDialog';
 
 export default function SheetsDashboard() {
   const { sheets, setSheets, addSheet, removeSheet } = useRoomStore();
@@ -24,6 +27,8 @@ export default function SheetsDashboard() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedSheet, setSelectedSheet] = useState<Sheet | null>(null);
+  const [smartRoomCreationOpen, setSmartRoomCreationOpen] = useState(false);
+  const [newlyCreatedSheet, setNewlyCreatedSheet] = useState<Sheet | null>(null);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,6 +44,7 @@ export default function SheetsDashboard() {
   const [formData, setFormData] = useState({
     name: '',
   });
+  const [isCreatingSheet, setIsCreatingSheet] = useState(false);
 
   // Filtered and paginated data
   const filteredSheets = useMemo(() => {
@@ -77,7 +83,8 @@ export default function SheetsDashboard() {
     const fetchSheets = async () => {
       setIsLoading(true);
       try {
-        const response = await sheetsApi.getAll();
+        // Use admin endpoint to get sheets with access codes
+        const response = await sheetsApi.getAllWithCodes();
         setSheets(response.data);
       } catch (error) {
         console.error('Error fetching sheets:', error);
@@ -92,17 +99,27 @@ export default function SheetsDashboard() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreatingSheet(true);
+    
     try {
       const response = await sheetsApi.create({
         name: formData.name,
       });
-      addSheet(response.data);
+      const createdSheet = response.data;
+      addSheet(createdSheet);
       setCreateModalOpen(false);
       setFormData({ name: '' });
+      
+      // Set the newly created sheet and trigger smart room creation
+      setNewlyCreatedSheet(createdSheet);
+      setSmartRoomCreationOpen(true);
+      
       toast.success('Sheet created successfully');
     } catch (error: any) {
       const message = error.response?.data?.message || 'Failed to create sheet';
       toast.error(message);
+    } finally {
+      setIsCreatingSheet(false);
     }
   };
 
@@ -156,6 +173,22 @@ export default function SheetsDashboard() {
     setDeleteModalOpen(true);
   };
 
+  const handleRoomsCreated = (createdRooms: Room[]) => {
+    // Refresh the sheets data to include the new rooms
+    const fetchSheets = async () => {
+      try {
+        const response = await sheetsApi.getAllWithCodes();
+        setSheets(response.data);
+      } catch (error) {
+        console.error('Error refreshing sheets:', error);
+      }
+    };
+
+    fetchSheets();
+    setSmartRoomCreationOpen(false);
+    setNewlyCreatedSheet(null);
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -186,27 +219,51 @@ export default function SheetsDashboard() {
               <DialogHeader>
                 <DialogTitle>Create New Sheet</DialogTitle>
                 <DialogDescription>
-                  Create a new sheet to organize your rooms.
+                  Create a new sheet to organize your rooms. After creation, you'll have the option to add rooms to this sheet.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Sheet Name</Label>
+                  <Label htmlFor="name">Sheet Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder="Enter sheet name"
+                    placeholder="Enter sheet name (e.g., Building A, Floor 1)"
                     required
+                    disabled={isCreatingSheet}
+                    maxLength={50}
+                    aria-describedby="sheet-name-help"
                   />
+                  <p id="sheet-name-help" className="text-xs text-gray-500 mt-1">
+                    Choose a descriptive name for easy identification
+                  </p>
                 </div>
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setCreateModalOpen(false)}
+                    disabled={isCreatingSheet}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit">Create Sheet</Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isCreatingSheet || !formData.name.trim()}
+                    className="min-w-32"
+                  >
+                    {isCreatingSheet ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Sheet'
+                    )}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
@@ -216,8 +273,16 @@ export default function SheetsDashboard() {
         {/* Search and Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              All Sheets ({filteredSheets.length} of {sheets.length})
+            <CardTitle className="flex items-center justify-between">
+              <span>All Sheets ({filteredSheets.length} of {sheets.length})</span>
+              <RowsPerPageSelector
+                value={itemsPerPage}
+                onChange={(newItemsPerPage) => {
+                  setItemsPerPage(newItemsPerPage);
+                  setCurrentPage(1);
+                }}
+                className="shrink-0"
+              />
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -252,86 +317,95 @@ export default function SheetsDashboard() {
 
         <Card>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Sheet Name</TableHead>
-                  <TableHead>Total Rooms</TableHead>
-                  <TableHead>Total Members</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedSheets.length === 0 ? (
+            {/* Responsive table container */}
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                      {searchQuery || Object.values(filters).some(f => f) 
-                        ? 'No sheets match your search criteria'
-                        : 'No sheets found'
-                      }
-                    </TableCell>
+                    <TableHead className="min-w-32">Sheet Name</TableHead>
+                    <TableHead className="min-w-28">Total Rooms</TableHead>
+                    <TableHead className="min-w-28">Total Members</TableHead>
+                    <TableHead className="min-w-32">Access Code</TableHead>
+                    <TableHead className="min-w-24">Created</TableHead>
+                    <TableHead className="min-w-24">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedSheets.map((sheet) => {
-                  const totalMembers = sheet.rooms.reduce((sum, room) => sum + room.members.length, 0);
-                  return (
-                    <TableRow key={sheet.id}>
-                      <TableCell className="font-medium">{sheet.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Building className="h-4 w-4" />
-                          {sheet.rooms.length}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {totalMembers}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(sheet.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditModal(sheet)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openDeleteModal(sheet)}
-                            disabled={sheet.rooms.length > 0}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {paginatedSheets.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        {searchQuery || Object.values(filters).some(f => f) 
+                          ? 'No sheets match your search criteria'
+                          : 'No sheets found'
+                        }
                       </TableCell>
                     </TableRow>
-                  );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    paginatedSheets.map((sheet) => {
+                    const totalMembers = sheet.rooms.reduce((sum, room) => sum + room.members.length, 0);
+                    return (
+                      <TableRow key={sheet.id}>
+                        <TableCell className="font-medium">{sheet.name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Building className="h-4 w-4" />
+                            {sheet.rooms.length}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {totalMembers}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <CopyCodeButton 
+                            code={sheet.code} 
+                            sheetName={sheet.name}
+                            showCodeToggle={true}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {new Date(sheet.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditModal(sheet)}
+                              aria-label={`Edit sheet ${sheet.name}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openDeleteModal(sheet)}
+                              disabled={sheet.rooms.length > 0}
+                              className="text-red-600 hover:text-red-700"
+                              aria-label={`Delete sheet ${sheet.name}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             {paginatedSheets.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-6 pt-4 border-t">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   totalItems={filteredSheets.length}
                   itemsPerPage={itemsPerPage}
                   onPageChange={setCurrentPage}
-                  onItemsPerPageChange={(newItemsPerPage) => {
-                    setItemsPerPage(newItemsPerPage);
-                    setCurrentPage(1);
-                  }}
                 />
               </div>
             )}
@@ -398,6 +472,14 @@ export default function SheetsDashboard() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Smart Room Creation Dialog */}
+        <SmartRoomCreationDialog
+          open={smartRoomCreationOpen}
+          onOpenChange={setSmartRoomCreationOpen}
+          sheet={newlyCreatedSheet}
+          onRoomsCreated={handleRoomsCreated}
+        />
       </div>
     </DashboardLayout>
   );

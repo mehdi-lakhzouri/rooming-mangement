@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
-import { Users, Eye } from 'lucide-react';
+import { Users, Eye, LogIn } from 'lucide-react';
 import { Room } from '../lib/api';
 import JoinRoomModal from './JoinRoomModal';
 import { cn } from '../lib/utils';
@@ -131,19 +131,19 @@ export default function RoomCard({ room }: RoomCardProps) {
           disabled={isFull}
         >
           <Button 
-            className="flex-1 mr-4" 
+            className="flex-1 mr-4 flex items-center gap-2"
             disabled={isFull}
             variant={isFull ? "outline" : "default"}
           >
-            {isFull ? 'Room Full' : 'Join Room'}
+            {isFull ? 'Room Full' : <><LogIn size={20} absoluteStrokeWidth className="mr-1" />Join Room</>}
           </Button>
         </JoinRoomModal>
-        
+
         <Link href={`/room/${room.id}`}>
           <Button 
             variant="ghost" 
             size="sm"
-            className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
           >
             <Eye className="h-4 w-4" />
             <span>View</span>

@@ -13,6 +13,7 @@ import SearchBar from '../../../components/SearchBar';
 import Pagination from '../../../components/Pagination';
 import FilterBar from '../../../components/FilterBar';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import RowsPerPageSelector from '../../../components/RowsPerPageSelector';
 
 export default function MembersDashboard() {
   const [members, setMembers] = useState<RoomMember[]>([]);
@@ -191,8 +192,16 @@ export default function MembersDashboard() {
         {/* Search and Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              All Members ({filteredMembers.length} of {members.length})
+            <CardTitle className="flex items-center justify-between">
+              <span>All Members ({filteredMembers.length} of {members.length})</span>
+              <RowsPerPageSelector
+                value={itemsPerPage}
+                onChange={(newItemsPerPage) => {
+                  setItemsPerPage(newItemsPerPage);
+                  setCurrentPage(1);
+                }}
+                className="shrink-0"
+              />
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -227,71 +236,75 @@ export default function MembersDashboard() {
 
         <Card>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Sheet</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedMembers.length === 0 ? (
+            {/* Responsive table container */}
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      {searchQuery || Object.values(filters).some(f => f) 
-                        ? 'No members match your search criteria'
-                        : 'No members found'
-                      }
-                    </TableCell>
+                    <TableHead className="min-w-32">Name</TableHead>
+                    <TableHead className="min-w-24">Room</TableHead>
+                    <TableHead className="min-w-20">Gender</TableHead>
+                    <TableHead className="min-w-24">Sheet</TableHead>
+                    <TableHead className="min-w-24">Joined</TableHead>
+                    <TableHead className="min-w-20">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedMembers.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell className="font-medium">
-                      {member.user.firstname} {member.user.lastname}
-                    </TableCell>
-                    <TableCell>{member.room?.name || 'Unknown'}</TableCell>
-                    <TableCell>
-                      <Badge className={getGenderBadgeColor(member.room?.gender || 'MIXED')}>
-                        {member.room?.gender || 'MIXED'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{member.room?.sheet?.name || 'Unknown'}</TableCell>
-                    <TableCell>
-                      {new Date(member.joinedAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openDeleteModal(member)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedMembers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        {searchQuery || Object.values(filters).some(f => f) 
+                          ? 'No members match your search criteria'
+                          : 'No members found'
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">
+                        {member.user.firstname} {member.user.lastname}
+                      </TableCell>
+                      <TableCell>{member.room?.name || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <Badge className={getGenderBadgeColor(member.room?.gender || 'MIXED')}>
+                          {member.room?.gender || 'MIXED'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {member.room?.sheet?.name || 'Unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(member.joinedAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openDeleteModal(member)}
+                          className="text-red-600 hover:text-red-700"
+                          aria-label={`Remove ${member.user.firstname} ${member.user.lastname} from room`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             {paginatedMembers.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-6 pt-4 border-t">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   totalItems={filteredMembers.length}
                   itemsPerPage={itemsPerPage}
                   onPageChange={setCurrentPage}
-                  onItemsPerPageChange={(newItemsPerPage) => {
-                    setItemsPerPage(newItemsPerPage);
-                    setCurrentPage(1);
-                  }}
                 />
               </div>
             )}

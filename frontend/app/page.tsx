@@ -7,7 +7,11 @@ import { Building } from 'lucide-react';
 import RoomCard from '../components/RoomCard';
 import GenderFilter from '../components/GenderFilter';
 import BottomSheetSelector from '../components/BottomSheetSelector';
+import MobileSheetSelector from '../components/MobileSheetSelector';
+import SheetLockWrapper from '../components/SheetLockWrapper';
+import SheetUnlockModal from '../components/SheetUnlockModal';
 import { useRoomStore } from '../store/useRoomStore';
+import { useSheetAccessStore } from '../store/useSheetAccessStore';
 import { sheetsApi } from '../lib/api';
 import { socket } from '../lib/socket';
 
@@ -29,27 +33,43 @@ export default function Home() {
     handleSheetDeleted,
   } = useRoomStore();
 
-  // Filter rooms based on selected criteria
+  const { isSheetUnlocked } = useSheetAccessStore();
+
+  // Filter rooms based on selected criteria and sheet access
   const filteredRooms = useMemo(() => {
-    let rooms = sheets.flatMap(sheet => sheet.rooms);
+    // If no sheet is selected, select the first available sheet
+    const currentSheet = selectedSheet || (sheets.length > 0 ? sheets[0].id : null);
+    
+    if (!currentSheet) {
+      return [];
+    }
+    
+    const sheet = sheets.find(s => s.id === currentSheet);
+    if (!sheet || !isSheetUnlocked(sheet.id)) {
+      return [];
+    }
+    
+    let rooms = sheet.rooms;
     
     if (selectedGender !== 'ALL') {
       rooms = rooms.filter(room => room.gender === selectedGender);
     }
     
-    if (selectedSheet) {
-      rooms = rooms.filter(room => room.sheetId === selectedSheet);
-    }
-    
     return rooms;
-  }, [sheets, selectedGender, selectedSheet]);
+  }, [sheets, selectedGender, selectedSheet, isSheetUnlocked]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const response = await sheetsApi.getAll();
-        setSheets(response.data);
+        const sheetsData = response.data;
+        setSheets(sheetsData);
+        
+        // Set default sheet if none is selected and sheets are available
+        if (!selectedSheet && sheetsData.length > 0) {
+          setSelectedSheet(sheetsData[0].id);
+        }
       } catch (error) {
         setError('Failed to load data');
         console.error('Error fetching sheets:', error);
@@ -59,7 +79,7 @@ export default function Home() {
     };
 
     fetchData();
-  }, [setSheets, setLoading, setError]);
+  }, [setSheets, setLoading, setError, selectedSheet, setSelectedSheet]);
 
   useEffect(() => {
     // Socket event listeners
@@ -92,6 +112,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
         {/* Header */}
@@ -108,7 +129,7 @@ export default function Home() {
           </Link>
         </div>
         {/* Filters */}
-        <div className="mb-8 space-y-4">
+        <div className="mb-8 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Available Rooms</h2>
             <div className="text-sm text-gray-500">
@@ -116,47 +137,93 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex justify-center">
             <GenderFilter />
           </div>
         </div>
 
         {/* Rooms Grid */}
-        {filteredRooms.length === 0 ? (
-          <div className="text-center py-12">
-            <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No rooms found</h3>
-            <p className="text-gray-500">Try adjusting your filters or check back later.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRooms.map((room) => (
-              <RoomCard key={room.id} room={room} />
-            ))}
-          </div>
-        )}
+        {(() => {
+          const currentSheetId = selectedSheet || (sheets.length > 0 ? sheets[0].id : null);
+          const sheet = sheets.find(s => s.id === currentSheetId);
+          
+          if (!sheet) {
+            return (
+              <div className="text-center py-12">
+                <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No sheets available</h3>
+                <p className="text-gray-500">Create a sheet to start adding rooms.</p>
+              </div>
+            );
+          }
+          
+          const sheetRooms = sheet.rooms.filter(room => 
+            selectedGender === 'ALL' || room.gender === selectedGender
+          );
+          
+          return (
+            <SheetLockWrapper sheet={sheet}>
+              {sheetRooms.length === 0 ? (
+                <div className="text-center py-12">
+                  <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No rooms found</h3>
+                  <p className="text-gray-500">Try adjusting your filters or check back later.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {sheetRooms.map((room) => (
+                    <RoomCard key={room.id} room={room} />
+                  ))}
+                </div>
+              )}
+            </SheetLockWrapper>
+          );
+        })()}
       </main>
       
-      {/* Bottom Sheet Selector */}
-      <BottomSheetSelector
-        sheets={[
-          { id: 'all', name: 'All Sheets' },
-          ...sheets.map(sheet => ({
+      {/* Bottom Sheet Selector - Desktop Only */}
+      <div className="hidden md:block">
+        <BottomSheetSelector
+          sheets={sheets.map(sheet => ({
             id: sheet.id,
             name: sheet.name
-          }))
-        ]}
-        activeSheetId={selectedSheet || 'all'}
-        onSheetSelect={(sheetId) => setSelectedSheet(sheetId === 'all' ? null : sheetId)}
-        onSheetCreate={() => {
-          // This could open a modal or navigate to create sheet page
-          console.log('Add new sheet');
-        }}
-        onSheetDelete={(sheetId: string) => {
-          if (sheetId !== 'all') {
-            // This could show a confirmation dialog
-            console.log('Delete sheet:', sheetId);
-          }
+          }))}
+          activeSheetId={selectedSheet || (sheets.length > 0 ? sheets[0].id : '')}
+          onSheetSelect={(sheetId) => setSelectedSheet(sheetId)}
+          isSheetUnlocked={isSheetUnlocked}
+          onSheetCreate={() => {
+            // This could open a modal or navigate to create sheet page
+            console.log('Add new sheet');
+          }}
+          onSheetDelete={(sheetId: string) => {
+            if (sheetId !== 'all') {
+              // This could show a confirmation dialog
+              console.log('Delete sheet:', sheetId);
+            }
+          }}
+        />
+      </div>
+
+      {/* Mobile Sheet Selector - Mobile Only */}
+      <div className="md:hidden">
+        <MobileSheetSelector
+          sheets={sheets.map(sheet => ({
+            id: sheet.id,
+            name: sheet.name
+          }))}
+          activeSheetId={selectedSheet || (sheets.length > 0 ? sheets[0].id : null)}
+          onSheetSelect={(sheetId) => setSelectedSheet(sheetId)}
+          isSheetUnlocked={isSheetUnlocked}
+          onSheetCreate={() => {
+            console.log('Add new sheet');
+          }}
+        />
+      </div>
+      
+      {/* Sheet Unlock Modal */}
+      <SheetUnlockModal 
+        onUnlock={(sheetId) => {
+          console.log(`Sheet ${sheetId} unlocked successfully`);
         }}
       />
     </div>

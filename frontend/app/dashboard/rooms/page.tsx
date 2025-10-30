@@ -17,6 +17,7 @@ import SearchBar from '../../../components/SearchBar';
 import Pagination from '../../../components/Pagination';
 import FilterBar, { FilterOption } from '../../../components/FilterBar';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import RowsPerPageSelector from '../../../components/RowsPerPageSelector';
 
 export default function RoomsDashboard() {
   const { sheets, setSheets } = useRoomStore();
@@ -43,7 +44,7 @@ export default function RoomsDashboard() {
   const [formData, setFormData] = useState({
     name: '',
     capacity: '',
-    gender: 'MALE' as 'MALE' | 'FEMALE' | 'MIXED',
+    gender: 'MALE' as 'MALE' | 'FEMALE',
     sheetId: '',
   });
 
@@ -77,8 +78,7 @@ export default function RoomsDashboard() {
       key: 'gender',
       options: [
         { label: 'Male', value: 'MALE' },
-        { label: 'Female', value: 'FEMALE' },
-        { label: 'Mixed', value: 'MIXED' }
+        { label: 'Female', value: 'FEMALE' }
       ]
     },
     {
@@ -195,8 +195,7 @@ export default function RoomsDashboard() {
         return 'bg-blue-100 text-blue-800';
       case 'FEMALE':
         return 'bg-pink-100 text-pink-800';
-      case 'MIXED':
-        return 'bg-purple-100 text-purple-800';
+
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -271,14 +270,14 @@ export default function RoomsDashboard() {
                     id="gender"
                     value={formData.gender}
                     onChange={(e) => 
-                      setFormData({ ...formData, gender: e.target.value as 'MALE' | 'FEMALE' | 'MIXED' })
+                      setFormData({ ...formData, gender: e.target.value as 'MALE' | 'FEMALE' })
                     }
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
                     <option value="MALE">Male</option>
                     <option value="FEMALE">Female</option>
-                    <option value="MIXED">Mixed</option>
+
                   </select>
                 </div>
                 <div>
@@ -314,8 +313,16 @@ export default function RoomsDashboard() {
         {/* Search and Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              All Rooms ({filteredRooms.length} of {rooms.length})
+            <CardTitle className="flex items-center justify-between">
+              <span>All Rooms ({filteredRooms.length} of {rooms.length})</span>
+              <RowsPerPageSelector
+                value={itemsPerPage}
+                onChange={(newItemsPerPage) => {
+                  setItemsPerPage(newItemsPerPage);
+                  setCurrentPage(1);
+                }}
+                className="shrink-0"
+              />
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -350,89 +357,99 @@ export default function RoomsDashboard() {
 
         <Card>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Room Name</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Capacity</TableHead>
-                  <TableHead>Current Members</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Occupancy</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedRooms.length === 0 ? (
+            {/* Responsive table container */}
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      {searchQuery || Object.values(filters).some(f => f) 
-                        ? 'No rooms match your search criteria'
-                        : 'No rooms found'
-                      }
-                    </TableCell>
+                    <TableHead className="min-w-32">Room Name</TableHead>
+                    <TableHead className="min-w-24">Sheet</TableHead>
+                    <TableHead className="min-w-20">Gender</TableHead>
+                    <TableHead className="min-w-20">Capacity</TableHead>
+                    <TableHead className="min-w-28">Members</TableHead>
+                    <TableHead className="min-w-24">Status</TableHead>
+                    <TableHead className="min-w-24">Occupancy</TableHead>
+                    <TableHead className="min-w-24">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedRooms.map((room) => (
-                  <TableRow key={room.id}>
-                    <TableCell className="font-medium">{room.name}</TableCell>
-                    <TableCell>
-                      <Badge className={getGenderBadgeColor(room.gender)}>
-                        {room.gender}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{room.capacity}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {room.members.length}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={room.members.length >= room.capacity ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
-                        {room.members.length >= room.capacity ? 'Full' : 'Available'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {Math.round((room.members.length / room.capacity) * 100)}%
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditModal(room)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openDeleteModal(room)}
-                          disabled={room.members.length > 0}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedRooms.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                        {searchQuery || Object.values(filters).some(f => f) 
+                          ? 'No rooms match your search criteria'
+                          : 'No rooms found'
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedRooms.map((room) => {
+                      const roomSheet = sheets.find(sheet => sheet.id === room.sheetId);
+                      return (
+                        <TableRow key={room.id}>
+                          <TableCell className="font-medium">{room.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">
+                              {roomSheet?.name || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getGenderBadgeColor(room.gender)}>
+                              {room.gender}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{room.capacity}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4" />
+                              {room.members.length}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={room.members.length >= room.capacity ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                              {room.members.length >= room.capacity ? 'Full' : 'Available'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {Math.round((room.members.length / room.capacity) * 100)}%
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditModal(room)}
+                                aria-label={`Edit room ${room.name}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openDeleteModal(room)}
+                                disabled={room.members.length > 0}
+                                aria-label={`Delete room ${room.name}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             {paginatedRooms.length > 0 && (
-              <div className="mt-4">
+              <div className="mt-6 pt-4 border-t">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   totalItems={filteredRooms.length}
                   itemsPerPage={itemsPerPage}
                   onPageChange={setCurrentPage}
-                  onItemsPerPageChange={(newItemsPerPage) => {
-                    setItemsPerPage(newItemsPerPage);
-                    setCurrentPage(1);
-                  }}
                 />
               </div>
             )}
@@ -484,14 +501,14 @@ export default function RoomsDashboard() {
                   id="edit-gender"
                   value={formData.gender}
                   onChange={(e) => 
-                    setFormData({ ...formData, gender: e.target.value as 'MALE' | 'FEMALE' | 'MIXED' })
+                    setFormData({ ...formData, gender: e.target.value as 'MALE' | 'FEMALE' })
                   }
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="MALE">Male</option>
                   <option value="FEMALE">Female</option>
-                  <option value="MIXED">Mixed</option>
+
                 </select>
               </div>
               <div className="flex justify-end space-x-2">
