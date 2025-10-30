@@ -3,7 +3,6 @@ import { IsString, IsNotEmpty, IsInt, Min, IsEnum } from 'class-validator';
 export enum Gender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
-  MIXED = 'MIXED',
 }
 
 export class CreateRoomDto {

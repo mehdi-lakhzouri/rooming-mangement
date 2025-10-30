@@ -9,12 +9,14 @@ async function main() {
   const sheet1 = await prisma.sheet.create({
     data: {
       name: 'Dormitory A',
+      code: 'SDC-4376',
     },
   });
 
   const sheet2 = await prisma.sheet.create({
     data: {
       name: 'Dormitory B',
+      code: 'SDC-7890',
     },
   });
 
@@ -50,7 +52,7 @@ async function main() {
       {
         name: 'Room 2',
         capacity: 3,
-        gender: 'MIXED',
+        gender: 'MALE',
         sheetId: sheet2.id,
       },
     ],

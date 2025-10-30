@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from './ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Unlock } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface Sheet {
@@ -17,6 +17,7 @@ interface BottomSheetSelectorProps {
   onSheetSelect: (sheetId: string) => void;
   onSheetCreate?: () => void;
   onSheetDelete?: (sheetId: string) => void;
+  isSheetUnlocked?: (sheetId: string) => boolean;
   className?: string;
 }
 
@@ -26,6 +27,7 @@ export default function BottomSheetSelector({
   onSheetSelect,
   onSheetCreate,
   onSheetDelete,
+  isSheetUnlocked,
   className
 }: BottomSheetSelectorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,20 +121,16 @@ export default function BottomSheetSelector({
 
         {/* Sheet Tabs Container - Clean Design */}
         <div className="flex-1 flex items-stretch overflow-hidden">
-          <div className="flex items-stretch w-full">
+          <div className="flex items-stretch w-full h-full">
             {currentPageSheets.map((sheet, index) => {
               const isActive = sheet.id === activeSheetId;
-              
-              // Calculate responsive width - proportionally fill available space
-              const tabWidth = `${100 / currentPageSheets.length}%`;
               
               return (
                 <div
                   key={sheet.id}
-                  style={{ width: tabWidth }}
                   className={cn(
                     "relative flex items-center justify-center group cursor-pointer transition-all duration-200",
-                    "px-3 py-2 min-w-0",
+                    "px-2 py-3 min-w-0 flex-1 h-full", // Use flex-1 for equal width distribution and h-full for consistent height
                     isActive
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -140,9 +138,25 @@ export default function BottomSheetSelector({
                   onClick={() => onSheetSelect(sheet.id)}
                 >
                   {/* Sheet Content - Clean Layout */}
-                  <div className="flex items-center justify-center min-w-0 flex-1">
+                  <div className="flex items-center justify-center min-w-0 w-full gap-2 px-2">
+                    {/* Lock/Unlock Icon - Skip for 'all' sheet */}
+                    {sheet.id !== 'all' && (
+                      <div className="shrink-0">
+                        {isSheetUnlocked?.(sheet.id) ? (
+                          <Unlock className={cn(
+                            "h-3 w-3", 
+                            isActive ? "text-white" : "text-green-600"
+                          )} />
+                        ) : (
+                          <Lock className={cn(
+                            "h-3 w-3", 
+                            isActive ? "text-white" : "text-gray-500"
+                          )} />
+                        )}
+                      </div>
+                    )}
                     <span className={cn(
-                      "font-medium truncate text-center",
+                      "font-medium truncate text-center flex-1",
                       "text-sm",
                       isActive ? "text-white" : "text-gray-700"
                     )}>

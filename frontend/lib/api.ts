@@ -28,7 +28,7 @@ export interface Room {
   id: string;
   name: string;
   capacity: number;
-  gender: 'MALE' | 'FEMALE' | 'MIXED';
+  gender: 'MALE' | 'FEMALE';
   isFull: boolean;
   createdAt: string;
   sheetId: string;
@@ -41,6 +41,7 @@ export interface Sheet {
   name: string;
   createdAt: string;
   rooms: Room[];
+  code?: string; // Only included in admin endpoints
 }
 
 export interface JoinRoomData {
@@ -51,10 +52,12 @@ export interface JoinRoomData {
 // API functions
 export const sheetsApi = {
   getAll: () => api.get<Sheet[]>('/sheets'),
+  getAllWithCodes: () => api.get<Sheet[]>('/sheets/admin/with-codes'), // Admin endpoint with codes
   getOne: (id: string) => api.get<Sheet>(`/sheets/${id}`),
   create: (data: { name: string }) => api.post<Sheet>('/sheets', data),
   update: (id: string, data: { name: string }) => api.put<Sheet>(`/sheets/${id}`, data),
   delete: (id: string) => api.delete(`/sheets/${id}`),
+  validateCode: (code: string) => api.post<{ sheetId: string }>('/sheets/validate-code', { code }),
 };
 
 export const roomsApi = {
@@ -63,7 +66,7 @@ export const roomsApi = {
   create: (data: {
     name: string;
     capacity: number;
-    gender: 'MALE' | 'FEMALE' | 'MIXED';
+    gender: 'MALE' | 'FEMALE';
     sheetId: string;
   }) => api.post<Room>('/rooms', data),
   update: (id: string, data: Partial<Room>) => api.patch<Room>(`/rooms/${id}`, data),

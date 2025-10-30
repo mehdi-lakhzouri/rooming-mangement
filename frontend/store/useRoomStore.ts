@@ -5,7 +5,7 @@ interface RoomStore {
   // State
   sheets: Sheet[];
   rooms: Room[];
-  selectedGender: 'ALL' | 'MALE' | 'FEMALE' | 'MIXED';
+  selectedGender: 'ALL' | 'MALE' | 'FEMALE';
   selectedSheet: string | null;
   isLoading: boolean;
   error: string | null;
@@ -18,7 +18,7 @@ interface RoomStore {
   removeRoom: (roomId: string) => void;
   addSheet: (sheet: Sheet) => void;
   removeSheet: (sheetId: string) => void;
-  setSelectedGender: (gender: 'ALL' | 'MALE' | 'FEMALE' | 'MIXED') => void;
+  setSelectedGender: (gender: 'ALL' | 'MALE' | 'FEMALE') => void;
   setSelectedSheet: (sheetId: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;

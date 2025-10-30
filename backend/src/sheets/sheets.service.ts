@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebsocketGateway } from '../websocket/websocket.gateway';
 import { CreateSheetDto } from './dto/create-sheet.dto';
@@ -10,10 +10,42 @@ export class SheetsService {
     private readonly websocketGateway: WebsocketGateway,
   ) {}
 
+  private generateSheetCode(): string {
+    const prefix = process.env.SHEET_CODE_PREFIX || 'SDC';
+    const randomNumber = Math.floor(Math.random() * 9000) + 1000; // 4 digit number (1000-9999)
+    return `${prefix}-${randomNumber}`;
+  }
+
+  private async ensureUniqueCode(): Promise<string> {
+    let code = this.generateSheetCode();
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      const existingSheet = await this.prisma.sheet.findUnique({
+        where: { code }
+      });
+
+      if (!existingSheet) {
+        return code;
+      }
+
+      code = this.generateSheetCode();
+      attempts++;
+    }
+
+    throw new ConflictException('Unable to generate unique sheet code');
+  }
+
   async create(createSheetDto: CreateSheetDto) {
     try {
+      const code = await this.ensureUniqueCode();
+      
       const sheet = await this.prisma.sheet.create({
-        data: createSheetDto,
+        data: {
+          ...createSheetDto,
+          code,
+        },
         include: {
           rooms: {
             include: {
@@ -38,6 +70,27 @@ export class SheetsService {
   }
 
   async findAll() {
+    return this.prisma.sheet.findMany({
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        // code excluded for security
+        rooms: {
+          include: {
+            members: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async findAllWithCodes() {
+    // Admin-only method that includes codes
     return this.prisma.sheet.findMany({
       include: {
         rooms: {
@@ -126,5 +179,42 @@ export class SheetsService {
 
     this.websocketGateway.emitSheetDeleted(id);
     return { message: 'Sheet deleted successfully' };
+  }
+
+  async validateCode(code: string): Promise<{ sheetId: string } | null> {
+    const sheet = await this.prisma.sheet.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+
+    if (!sheet) {
+      return null;
+    }
+
+    return { sheetId: sheet.id };
+  }
+
+  async getSheetWithCode(id: string) {
+    // Admin method that includes the code
+    const sheet = await this.prisma.sheet.findUnique({
+      where: { id },
+      include: {
+        rooms: {
+          include: {
+            members: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!sheet) {
+      throw new NotFoundException('Sheet not found');
+    }
+
+    return sheet;
   }
 }
