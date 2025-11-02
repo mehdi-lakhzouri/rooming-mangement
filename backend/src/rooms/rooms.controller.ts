@@ -12,6 +12,7 @@ import { RoomsService } from './rooms.service';
 import { CreateRoomDto, Gender } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { JoinRoomDto } from './dto/join-room.dto';
+import { MoveMemberDto } from './dto/move-member.dto';
 
 @Controller('rooms')
 export class RoomsController {
@@ -58,6 +59,19 @@ export class RoomsController {
     @Param('memberId') memberId: string,
   ) {
     return this.roomsService.removeMember(roomId, memberId);
+  }
+
+  @Get('members/:memberId/available-rooms')
+  getAvailableRoomsForMember(@Param('memberId') memberId: string) {
+    return this.roomsService.getAvailableRoomsForMember(memberId);
+  }
+
+  @Post('members/:memberId/move')
+  moveMember(
+    @Param('memberId') memberId: string,
+    @Body() moveMemberDto: MoveMemberDto,
+  ) {
+    return this.roomsService.moveMember(memberId, moveMemberDto);
   }
 
   @Patch(':id/mark-full')

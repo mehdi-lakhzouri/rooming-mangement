@@ -4,6 +4,6 @@ import { IsBoolean, IsOptional } from 'class-validator';
 
 export class UpdateRoomDto extends PartialType(CreateRoomDto) {
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'isFull must be a boolean value' })
   isFull?: boolean;
 }

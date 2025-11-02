@@ -7,7 +7,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Progress } from '../../../components/ui/progress';
-import { ArrowLeft, Users, Calendar } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, UserPlus, Home, Info } from 'lucide-react';
 import { roomsApi, Room, RoomMember } from '../../../lib/api';
 import { socket } from '../../../lib/socket';
 import JoinRoomModal from '../../../components/JoinRoomModal';
@@ -147,121 +147,242 @@ export default function RoomDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="mb-6">
-          <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to rooms
-          </Link>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{room.name}</h1>
-              <div className="flex items-center gap-3">
-                <Badge className={cn('border', getGenderColor(room.gender))}>
+      {/* Mobile-First Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/" 
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Go back to rooms"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
+                {room.name}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge className={cn('text-xs border', getGenderColor(room.gender))}>
                   {room.gender}
                 </Badge>
-                <Badge className={isFull ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                <Badge className={cn('text-xs', isFull ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800')}>
                   {isFull ? 'Full' : 'Available'}
                 </Badge>
-                {room.sheet && (
-                  <span className="text-sm text-gray-600">Sheet: {room.sheet.name}</span>
-                )}
               </div>
             </div>
-            
-            <JoinRoomModal roomId={room.id} roomName={room.name} disabled={isFull}>
-              <Button disabled={isFull} size="lg">
-                {isFull ? 'Room Full' : 'Join Room'}
-              </Button>
-            </JoinRoomModal>
           </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Room Stats */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Room Statistics
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Occupancy</span>
-                  <span className="text-sm font-medium">
-                    {room.members.length} / {room.capacity}
-                  </span>
-                </div>
-                <div className="relative">
-                  <Progress value={occupancyRate} className="h-3" />
-                  <div 
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Mobile-First Room Info Card */}
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-blue-50 pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Info className="h-5 w-5 text-blue-600" />
+                  Room Information
+                </CardTitle>
+                {room.sheet && (
+                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Sheet: {room.sheet.name}
+                  </p>
+                )}
+              </div>
+              <div className="shrink-0">
+                <JoinRoomModal roomId={room.id} roomName={room.name} disabled={isFull}>
+                  <Button 
+                    disabled={isFull} 
+                    size="lg" 
                     className={cn(
-                      "absolute top-0 left-0 h-3 rounded-full transition-all",
-                      getGenderProgressColor(room.gender)
+                      "w-full sm:w-auto shadow-lg transition-all duration-200",
+                      !isFull && "hover:scale-105"
                     )}
-                    style={{ width: `${occupancyRate}%` }}
-                  />
+                  >
+                    <UserPlus className="h-5 w-5 mr-2" />
+                    {isFull ? 'Room Full' : 'Join Room'}
+                  </Button>
+                </JoinRoomModal>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Mobile-First Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Occupancy</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
+                    {room.members.length}/{room.capacity}
+                  </p>
                 </div>
+                <div className={cn(
+                  "p-2 sm:p-3 rounded-full",
+                  room.gender === 'MALE' ? 'bg-blue-100' : 'bg-pink-100'
+                )}>
+                  <Users className={cn(
+                    "h-4 w-4 sm:h-5 sm:w-5",
+                    room.gender === 'MALE' ? 'text-blue-600' : 'text-pink-600'
+                  )} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <Progress value={occupancyRate} className="h-2" />
                 <span className="text-xs text-gray-500 mt-1">
                   {Math.round(occupancyRate)}% occupied
                 </span>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="pt-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                  <Calendar className="h-4 w-4" />
-                  Created: {new Date(room.createdAt).toLocaleDateString()}
+          <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Status</p>
+                  <p className={cn(
+                    "text-lg sm:text-2xl font-bold",
+                    isFull ? 'text-red-600' : 'text-green-600'
+                  )}>
+                    {isFull ? 'Full' : 'Available'}
+                  </p>
                 </div>
-                <div className="text-sm text-gray-600">
-                  Capacity: {room.capacity} people
+                <div className={cn(
+                  "p-2 sm:p-3 rounded-full",
+                  isFull ? 'bg-red-100' : 'bg-green-100'
+                )}>
+                  <div className={cn(
+                    "h-4 w-4 sm:h-5 sm:w-5 rounded-full",
+                    isFull ? 'bg-red-500' : 'bg-green-500'
+                  )} />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Members List */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Current Members ({room.members.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {room.members.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No members yet</h3>
-                  <p className="text-gray-500">Be the first to join this room!</p>
+          <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Capacity</p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
+                    {room.capacity}
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {room.members.map((member) => {
-                    const initials = `${member.user.firstname.charAt(0)}${member.user.lastname.charAt(0)}`.toUpperCase();
-                    return (
-                      <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-linear-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {initials}
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900">
-                              {member.user.firstname} {member.user.lastname}
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              Joined: {new Date(member.joinedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        {/* Member removal disabled in view mode */}
-                      </div>
-                    );
-                  })}
+                <div className="p-2 sm:p-3 rounded-full bg-gray-100">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
                 </div>
-              )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Maximum members</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Created</p>
+                  <p className="text-sm sm:text-base font-semibold text-gray-900">
+                    {new Date(room.createdAt).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                </div>
+                <div className="p-2 sm:p-3 rounded-full bg-indigo-100">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(room.createdAt).getFullYear()}
+              </p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Members List - Mobile First */}
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-gray-50 border-b">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Users className="h-5 w-5 text-gray-700" />
+              Current Members
+              <Badge variant="secondary" className="ml-2">
+                {room.members.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {room.members.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No members yet</h3>
+                <p className="text-gray-500 text-sm sm:text-base">
+                  Be the first to join this room and start building your community!
+                </p>
+                <div className="mt-6">
+                  <JoinRoomModal roomId={room.id} roomName={room.name} disabled={isFull}>
+                    <Button size="lg" className="shadow-lg">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Join This Room
+                    </Button>
+                  </JoinRoomModal>
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {room.members.map((member, index) => {
+                  const initials = `${member.user.firstname.charAt(0)}${member.user.lastname.charAt(0)}`.toUpperCase();
+                  return (
+                    <div 
+                      key={member.id} 
+                      className="p-4 sm:p-6 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={cn(
+                          "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base shadow-sm",
+                          index % 3 === 0 && "bg-blue-500",
+                          index % 3 === 1 && "bg-green-500", 
+                          index % 3 === 2 && "bg-purple-500"
+                        )}>
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+                            {member.user.firstname} {member.user.lastname}
+                          </h4>
+                          <div className="flex items-center gap-4 mt-1">
+                            <p className="text-xs sm:text-sm text-gray-500 flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: new Date(member.joinedAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs hidden sm:inline-flex"
+                        >
+                          Member #{index + 1}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

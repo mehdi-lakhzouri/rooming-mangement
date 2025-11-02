@@ -6,7 +6,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Badge } from '../../../components/ui/badge';
-import { Trash2, Users, Building } from 'lucide-react';
+import { Trash2, Users, Building, ArrowRightLeft } from 'lucide-react';
 import { membersApi, roomsApi, RoomMember } from '../../../lib/api';
 import { toast } from 'sonner';
 import SearchBar from '../../../components/SearchBar';
@@ -14,12 +14,14 @@ import Pagination from '../../../components/Pagination';
 import FilterBar from '../../../components/FilterBar';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import RowsPerPageSelector from '../../../components/RowsPerPageSelector';
+import MoveMemberModal from '../../../components/MoveMemberModal';
 
 export default function MembersDashboard() {
   const [members, setMembers] = useState<RoomMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<RoomMember | null>(null);
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,6 +67,17 @@ export default function MembersDashboard() {
   const openDeleteModal = (member: RoomMember) => {
     setSelectedMember(member);
     setDeleteModalOpen(true);
+  };
+
+  const openMoveModal = (member: RoomMember) => {
+    setSelectedMember(member);
+    setMoveModalOpen(true);
+  };
+
+  const handleMemberMoved = (updatedMember: RoomMember) => {
+    setMembers(members.map(m =>
+      m.id === updatedMember.id ? updatedMember : m
+    ));
   };
 
   // Filtered and paginated data
@@ -280,15 +293,26 @@ export default function MembersDashboard() {
                         {new Date(member.joinedAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openDeleteModal(member)}
-                          className="text-red-600 hover:text-red-700"
-                          aria-label={`Remove ${member.user.firstname} ${member.user.lastname} from room`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openMoveModal(member)}
+                            className="text-blue-600 hover:text-blue-700"
+                            aria-label={`Move ${member.user.firstname} ${member.user.lastname} to another room`}
+                          >
+                            <ArrowRightLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openDeleteModal(member)}
+                            className="text-red-600 hover:text-red-700"
+                            aria-label={`Remove ${member.user.firstname} ${member.user.lastname} from room`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                     ))
@@ -324,6 +348,14 @@ export default function MembersDashboard() {
           onConfirm={handleRemoveMember}
           confirmText="Remove Member"
           isDestructive={true}
+        />
+
+        {/* Move Member Modal */}
+        <MoveMemberModal
+          open={moveModalOpen}
+          onOpenChange={setMoveModalOpen}
+          member={selectedMember}
+          onMemberMoved={handleMemberMoved}
         />
       </div>
     </DashboardLayout>

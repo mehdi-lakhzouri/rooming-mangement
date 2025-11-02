@@ -1,4 +1,14 @@
-import { IsString, IsNotEmpty, IsInt, Min, IsEnum } from 'class-validator';
+import { 
+  IsString, 
+  IsNotEmpty, 
+  IsInt, 
+  Min, 
+  Max, 
+  IsEnum, 
+  Matches, 
+  Length 
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export enum Gender {
   MALE = 'MALE',
@@ -6,18 +16,27 @@ export enum Gender {
 }
 
 export class CreateRoomDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'Room name must be a string' })
+  @IsNotEmpty({ message: 'Room name is required' })
+  @Length(1, 100, { message: 'Room name must be between 1 and 100 characters' })
+  @Matches(/^[a-zA-Z0-9\s\-_]+$/, {
+    message: 'Room name can only contain letters, numbers, spaces, hyphens, and underscores'
+  })
+  @Transform(({ value }) => value?.trim())
   name: string;
 
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'Capacity must be an integer' })
+  @Min(1, { message: 'Capacity must be at least 1' })
+  @Max(20, { message: 'Capacity cannot exceed 20' })
   capacity: number;
 
-  @IsEnum(Gender)
+  @IsEnum(Gender, { message: 'Gender must be either MALE or FEMALE' })
   gender: Gender;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'Sheet ID must be a string' })
+  @IsNotEmpty({ message: 'Sheet ID is required' })
+  @Matches(/^[a-zA-Z0-9_-]+$/, {
+    message: 'Sheet ID contains invalid characters'
+  })
   sheetId: string;
 }
