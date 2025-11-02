@@ -33,7 +33,13 @@ export default function Home() {
     handleSheetDeleted,
   } = useRoomStore();
 
-  const { isSheetUnlocked } = useSheetAccessStore();
+  const { isSheetUnlocked, setActiveSheet } = useSheetAccessStore();
+
+  // Handle sheet selection with auto-locking behavior
+  const handleSheetSelect = (sheetId: string) => {
+    setSelectedSheet(sheetId);
+    setActiveSheet(sheetId);
+  };
 
   // Filter rooms based on selected criteria and sheet access
   const filteredRooms = useMemo(() => {
@@ -68,7 +74,9 @@ export default function Home() {
         
         // Set default sheet if none is selected and sheets are available
         if (!selectedSheet && sheetsData.length > 0) {
-          setSelectedSheet(sheetsData[0].id);
+          const firstSheetId = sheetsData[0].id;
+          setSelectedSheet(firstSheetId);
+          setActiveSheet(firstSheetId);
         }
       } catch (error) {
         setError('Failed to load data');
@@ -189,7 +197,7 @@ export default function Home() {
             name: sheet.name
           }))}
           activeSheetId={selectedSheet || (sheets.length > 0 ? sheets[0].id : '')}
-          onSheetSelect={(sheetId) => setSelectedSheet(sheetId)}
+          onSheetSelect={handleSheetSelect}
           isSheetUnlocked={isSheetUnlocked}
           onSheetCreate={() => {
             // This could open a modal or navigate to create sheet page
@@ -212,7 +220,7 @@ export default function Home() {
             name: sheet.name
           }))}
           activeSheetId={selectedSheet || (sheets.length > 0 ? sheets[0].id : null)}
-          onSheetSelect={(sheetId) => setSelectedSheet(sheetId)}
+          onSheetSelect={handleSheetSelect}
           isSheetUnlocked={isSheetUnlocked}
           onSheetCreate={() => {
             console.log('Add new sheet');

@@ -32,7 +32,7 @@ export default function SheetLockWrapper({ sheet, children }: SheetLockWrapperPr
             Sheet Access Required
           </CardTitle>
           <CardDescription className="text-gray-600 mt-2">
-            This sheet ("{sheet.name}") is protected and requires an access code to view its contents.
+            This sheet ("{sheet.name}")  requires an access code to view its contents.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center pt-2">

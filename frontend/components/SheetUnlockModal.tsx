@@ -83,13 +83,25 @@ export default function SheetUnlockModal({ onUnlock }: SheetUnlockModalProps) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    if (!code.trim() || !targetSheetId) return;
+    const trimmedCode = code.trim();
+    
+    // Validate code format
+    const validationError = validateCode(trimmedCode);
+    if (validationError) {
+      setValidationError(validationError);
+      return;
+    }
+    
+    if (!targetSheetId) {
+      setValidationError('No sheet selected');
+      return;
+    }
 
     setValidating(true);
     setValidationError(null);
 
     try {
-      const response = await sheetsApi.validateCode(code.trim());
+      const response = await sheetsApi.validateCode(trimmedCode);
       
       if (response.data.sheetId === targetSheetId) {
         unlockSheet(targetSheetId);
@@ -100,6 +112,8 @@ export default function SheetUnlockModal({ onUnlock }: SheetUnlockModalProps) {
     } catch (error: any) {
       if (error.response?.status === 401) {
         setValidationError('Invalid code. Please try again.');
+      } else if (error.response?.status === 400) {
+        setValidationError('Code format is invalid');
       } else {
         setValidationError('Failed to validate code. Please try again.');
       }
@@ -108,19 +122,47 @@ export default function SheetUnlockModal({ onUnlock }: SheetUnlockModalProps) {
     }
   };
 
+  const validateCode = (code: string): string | null => {
+    const trimmedCode = code.trim();
+    
+    if (!trimmedCode) {
+      return 'Access code is required';
+    }
+    
+    // Code format validation (alphanumeric with optional dash)
+    const codeRegex = /^[A-Z0-9]{3,4}-?[A-Z0-9]{3,4}$/;
+    if (!codeRegex.test(trimmedCode)) {
+      return 'Invalid code format. Expected format: ABC-1234';
+    }
+    
+    if (trimmedCode.length < 6) {
+      return 'Code must be at least 6 characters';
+    }
+    
+    if (trimmedCode.length > 8) {
+      return 'Code cannot exceed 8 characters';
+    }
+    
+    return null;
+  };
+
   const handleCodeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    let value = event.target.value.toUpperCase();
+    let value = event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
     
     // Auto-format: Add dash after 3 characters if not present
     if (value.length === 4 && !value.includes('-')) {
       value = value.slice(0, 3) + '-' + value.slice(3);
     }
     
+    // Remove multiple dashes and ensure only one dash
+    value = value.replace(/-+/g, '-');
+    
     // Limit to expected format: XXX-XXXX (8 characters max)
     if (value.length <= 8) {
       setCode(value);
     }
     
+    // Clear validation error when user starts typing
     if (validationError) {
       setValidationError(null);
     }
@@ -178,7 +220,7 @@ export default function SheetUnlockModal({ onUnlock }: SheetUnlockModalProps) {
               type="text"
               value={code}
               onChange={handleCodeChange}
-              placeholder="Enter your code"
+              placeholder="ABC-1234"
               className={`w-full px-4 py-3 border rounded-lg text-center text-lg font-mono tracking-wider bg-gray-50 focus:bg-white transition-colors ${
                 validationError
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
@@ -188,9 +230,16 @@ export default function SheetUnlockModal({ onUnlock }: SheetUnlockModalProps) {
               autoComplete="off"
               spellCheck={false}
               maxLength={8}
+              pattern="[A-Z0-9]{3,4}-?[A-Z0-9]{3,4}"
+              title="Enter access code in format ABC-1234"
+              aria-invalid={!!validationError}
+              aria-describedby={validationError ? "code-error" : "code-help"}
             />
+            <div id="code-help" className="text-xs text-gray-500 text-center mt-1">
+              Format: 3-4 letters/numbers, dash, 3-4 letters/numbers
+            </div>
             {validationError && (
-              <div className="flex items-center space-x-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+              <div id="code-error" className="flex items-center space-x-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{validationError}</span>
               </div>

@@ -76,6 +76,10 @@ export const roomsApi = {
   removeMember: (roomId: string, memberId: string) => 
     api.delete(`/rooms/${roomId}/members/${memberId}`),
   markFull: (id: string) => api.patch<Room>(`/rooms/${id}/mark-full`),
+  moveMember: (memberId: string, data: { destinationRoomId: string }) =>
+    api.post(`/rooms/members/${memberId}/move`, data),
+  getAvailableRoomsForMember: (memberId: string) =>
+    api.get<Room[]>(`/rooms/members/${memberId}/available-rooms`),
 };
 
 export const usersApi = {

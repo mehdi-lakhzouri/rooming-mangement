@@ -7,6 +7,7 @@ interface SheetAccessStore {
   targetSheetId: string | null;
   isValidating: boolean;
   validationError: string | null;
+  activeSheetId: string | null; // Track the currently active sheet
 
   // Actions
   unlockSheet: (sheetId: string) => void;
@@ -16,6 +17,8 @@ interface SheetAccessStore {
   hideUnlockModal: () => void;
   setValidating: (isValidating: boolean) => void;
   setValidationError: (error: string | null) => void;
+  setActiveSheet: (sheetId: string | null) => void;
+  lockAllExcept: (activeSheetId: string | null) => void;
   clearSession: () => void;
 }
 
@@ -26,6 +29,7 @@ export const useSheetAccessStore = create<SheetAccessStore>((set, get) => ({
   targetSheetId: null,
   isValidating: false,
   validationError: null,
+  activeSheetId: null,
 
   // Actions
   unlockSheet: (sheetId: string) => set((state) => ({
@@ -62,11 +66,40 @@ export const useSheetAccessStore = create<SheetAccessStore>((set, get) => ({
 
   setValidationError: (validationError: string | null) => set({ validationError }),
 
+  setActiveSheet: (sheetId: string | null) => set((state) => {
+    // When setting a new active sheet, lock all other sheets except the new one
+    if (sheetId !== state.activeSheetId) {
+      const newUnlockedSheets = new Set<string>();
+      // Keep the new active sheet unlocked if it was previously unlocked
+      if (sheetId && state.unlockedSheets.has(sheetId)) {
+        newUnlockedSheets.add(sheetId);
+      }
+      
+      return {
+        activeSheetId: sheetId,
+        unlockedSheets: newUnlockedSheets,
+      };
+    }
+    
+    return { activeSheetId: sheetId };
+  }),
+
+  lockAllExcept: (activeSheetId: string | null) => set((state) => {
+    const newUnlockedSheets = new Set<string>();
+    // Only keep the active sheet unlocked if it was previously unlocked
+    if (activeSheetId && state.unlockedSheets.has(activeSheetId)) {
+      newUnlockedSheets.add(activeSheetId);
+    }
+    
+    return { unlockedSheets: newUnlockedSheets };
+  }),
+
   clearSession: () => set({
     unlockedSheets: new Set<string>(),
     isModalOpen: false,
     targetSheetId: null,
     isValidating: false,
     validationError: null,
+    activeSheetId: null,
   }),
 }));

@@ -18,6 +18,14 @@ interface RoomFormData {
   gender: 'MALE' | 'FEMALE';
 }
 
+interface FormErrors {
+  [key: number]: {
+    name?: string;
+    capacity?: string;
+    gender?: string;
+  };
+}
+
 interface SmartRoomCreationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,7 +44,7 @@ export default function SmartRoomCreationDialog({
   const [roomForms, setRoomForms] = useState<RoomFormData[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [createdRooms, setCreatedRooms] = useState<Room[]>([]);
-  const [errors, setErrors] = useState<{ [key: number]: string }>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   
   const firstInputRef = useRef<HTMLInputElement>(null);
   const roomCountInputRef = useRef<HTMLInputElement>(null);
@@ -88,22 +96,55 @@ export default function SmartRoomCreationDialog({
     updatedForms[index] = { ...updatedForms[index], [field]: value };
     setRoomForms(updatedForms);
     
-    // Clear error when user starts typing
-    if (errors[index]) {
+    // Clear specific field error when user starts typing
+    if (errors[index]?.[field]) {
       const newErrors = { ...errors };
-      delete newErrors[index];
+      if (newErrors[index]) {
+        delete newErrors[index][field];
+        // Remove the entire index if no errors remain
+        if (Object.keys(newErrors[index]).length === 0) {
+          delete newErrors[index];
+        }
+      }
       setErrors(newErrors);
     }
   };
 
   const validateForms = () => {
-    const newErrors: { [key: number]: string } = {};
+    const newErrors: FormErrors = {};
+    
+    // Room name validation regex (matching backend)
+    const nameRegex = /^[a-zA-ZÀ-ÿ\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF\s'-]+$/;
     
     roomForms.forEach((form, index) => {
-      if (!form.name.trim()) {
-        newErrors[index] = 'Room name is required';
-      } else if (form.name.length > 50) {
-        newErrors[index] = 'Room name must be less than 50 characters';
+      const formErrors: { name?: string; capacity?: string; gender?: string } = {};
+      
+      // Name validation
+      const trimmedName = form.name.trim();
+      if (!trimmedName) {
+        formErrors.name = 'Room name is required';
+      } else if (trimmedName.length < 2) {
+        formErrors.name = 'Room name must be at least 2 characters';
+      } else if (trimmedName.length > 50) {
+        formErrors.name = 'Room name must be less than 50 characters';
+      } else if (!nameRegex.test(trimmedName)) {
+        formErrors.name = 'Room name contains invalid characters';
+      }
+      
+      // Capacity validation
+      if (form.capacity < 1) {
+        formErrors.capacity = 'Capacity must be at least 1';
+      } else if (form.capacity > 20) {
+        formErrors.capacity = 'Capacity cannot exceed 20';
+      }
+      
+      // Gender validation
+      if (!['MALE', 'FEMALE'].includes(form.gender)) {
+        formErrors.gender = 'Please select a valid gender';
+      }
+      
+      if (Object.keys(formErrors).length > 0) {
+        newErrors[index] = formErrors;
       }
     });
 
@@ -120,7 +161,7 @@ export default function SmartRoomCreationDialog({
     try {
       const createdRoomPromises = roomForms.map(async (form) => {
         return roomsApi.create({
-          name: form.name,
+          name: form.name.trim(), // Sanitize name
           capacity: form.capacity,
           gender: form.gender,
           sheetId: sheet.id
@@ -260,9 +301,9 @@ export default function SmartRoomCreationDialog({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center justify-between">
                       <span>Room #{index + 1}</span>
-                      {errors[index] && (
+                      {errors[index] && Object.keys(errors[index]).length > 0 && (
                         <span className="text-red-600 text-xs font-normal">
-                          {errors[index]}
+                          Has errors
                         </span>
                       )}
                     </CardTitle>
@@ -280,14 +321,14 @@ export default function SmartRoomCreationDialog({
                         placeholder="Enter room name"
                         className={cn(
                           "mt-1",
-                          errors[index] ? "border-red-300 focus:border-red-500" : ""
+                          errors[index]?.name ? "border-red-300 focus:border-red-500" : ""
                         )}
-                        aria-invalid={!!errors[index]}
-                        aria-describedby={errors[index] ? `room-name-error-${index}` : undefined}
+                        aria-invalid={!!errors[index]?.name}
+                        aria-describedby={errors[index]?.name ? `room-name-error-${index}` : undefined}
                       />
-                      {errors[index] && (
+                      {errors[index]?.name && (
                         <p id={`room-name-error-${index}`} className="text-red-600 text-xs mt-1">
-                          {errors[index]}
+                          {errors[index].name}
                         </p>
                       )}
                     </div>
@@ -295,34 +336,53 @@ export default function SmartRoomCreationDialog({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor={`capacity-${index}`} className="text-xs">
-                          Capacity
+                          Capacity *
                         </Label>
                         <select
                           id={`capacity-${index}`}
                           value={form.capacity}
                           onChange={(e) => handleFormChange(index, 'capacity', parseInt(e.target.value))}
-                          className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={cn(
+                            "w-full mt-1 p-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                            errors[index]?.capacity ? "border-red-300" : "border-gray-300"
+                          )}
+                          aria-invalid={!!errors[index]?.capacity}
+                          aria-describedby={errors[index]?.capacity ? `capacity-error-${index}` : undefined}
                         >
-                          {[2, 3, 4, 5, 6, 7, 8].map(num => (
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(num => (
                             <option key={num} value={num}>{num} people</option>
                           ))}
                         </select>
+                        {errors[index]?.capacity && (
+                          <p id={`capacity-error-${index}`} className="text-red-600 text-xs mt-1">
+                            {errors[index].capacity}
+                          </p>
+                        )}
                       </div>
                       
                       <div>
                         <Label htmlFor={`gender-${index}`} className="text-xs">
-                          Gender Type
+                          Gender Type *
                         </Label>
                         <select
                           id={`gender-${index}`}
                           value={form.gender}
                           onChange={(e) => handleFormChange(index, 'gender', e.target.value)}
-                          className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={cn(
+                            "w-full mt-1 p-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                            errors[index]?.gender ? "border-red-300" : "border-gray-300"
+                          )}
+                          aria-invalid={!!errors[index]?.gender}
+                          aria-describedby={errors[index]?.gender ? `gender-error-${index}` : undefined}
                         >
-
                           <option value="MALE">Male</option>
                           <option value="FEMALE">Female</option>
                         </select>
+                        {errors[index]?.gender && (
+                          <p id={`gender-error-${index}`} className="text-red-600 text-xs mt-1">
+                            {errors[index].gender}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </CardContent>

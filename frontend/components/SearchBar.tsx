@@ -10,23 +10,50 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   className?: string;
   debounceMs?: number;
+  maxLength?: number;
+  allowSpecialChars?: boolean;
 }
 
 export default function SearchBar({ 
   placeholder = "Search...", 
   onSearch, 
   className = "",
-  debounceMs = 300 
+  debounceMs = 300,
+  maxLength = 100,
+  allowSpecialChars = true
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
 
+  // Validate and sanitize input
+  const validateInput = (value: string): string => {
+    let sanitized = value.trim();
+    
+    // Remove dangerous characters if special chars not allowed
+    if (!allowSpecialChars) {
+      sanitized = sanitized.replace(/[<>"/\\&]/g, '');
+    }
+    
+    // Limit length
+    if (sanitized.length > maxLength) {
+      sanitized = sanitized.slice(0, maxLength);
+    }
+    
+    return sanitized;
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onSearch(query);
+      const validatedQuery = validateInput(query);
+      onSearch(validatedQuery);
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [query, onSearch, debounceMs]);
+  }, [query, onSearch, debounceMs, maxLength, allowSpecialChars]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+  };
 
   const handleClear = () => {
     setQuery('');
@@ -41,8 +68,11 @@ export default function SearchBar({
           type="text"
           placeholder={placeholder}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleInputChange}
           className="pl-10 pr-10"
+          maxLength={maxLength}
+          autoComplete="off"
+          spellCheck={false}
         />
         {query && (
           <Button
