@@ -19,8 +19,8 @@ export class CreateRoomDto {
   @IsString({ message: 'Room name must be a string' })
   @IsNotEmpty({ message: 'Room name is required' })
   @Length(1, 100, { message: 'Room name must be between 1 and 100 characters' })
-  @Matches(/^[a-zA-Z0-9\s\-_]+$/, {
-    message: 'Room name can only contain letters, numbers, spaces, hyphens, and underscores'
+  @Matches(/^[a-zA-Z0-9\s\-_().,&]+$/, {
+    message: 'Room name can only contain letters, numbers, spaces, hyphens, underscores, parentheses, dots, commas, and ampersands'
   })
   @Transform(({ value }) => value?.trim())
   name: string;

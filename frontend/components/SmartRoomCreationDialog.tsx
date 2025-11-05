@@ -114,7 +114,7 @@ export default function SmartRoomCreationDialog({
     const newErrors: FormErrors = {};
     
     // Room name validation regex (matching backend)
-    const nameRegex = /^[a-zA-ZÀ-ÿ\u0100-\u017F\u0180-\u024F\u1E00-\u1EFF\s'-]+$/;
+    const nameRegex = /^[a-zA-Z0-9\s\-_().,&]+$/;
     
     roomForms.forEach((form, index) => {
       const formErrors: { name?: string; capacity?: string; gender?: string } = {};
