@@ -1,11 +1,43 @@
 import axios from 'axios';
+import { config } from './config';
+import { frontendLogger } from './logger';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = config.apiUrl || 'http://localhost:3001/api/v1';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
 });
+
+// Request interceptor for logging
+api.interceptors.request.use((request) => {
+  frontendLogger.logApi(request.method?.toUpperCase() || 'GET', request.url || '');
+  return request;
+});
+
+// Response interceptor for logging
+api.interceptors.response.use(
+  (response) => {
+    frontendLogger.logApi(
+      response.config.method?.toUpperCase() || 'GET', 
+      response.config.url || '', 
+      response.status
+    );
+    return response;
+  },
+  (error) => {
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+    const method = error.config?.method?.toUpperCase() || 'GET';
+    
+    frontendLogger.error(`API Error: ${method} ${url}`, {
+      status,
+      message: error.message,
+      data: error.response?.data
+    });
+    return Promise.reject(error);
+  }
+);
 
 // Types
 export interface User {

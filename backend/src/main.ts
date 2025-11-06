@@ -1,12 +1,19 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+import { CustomLoggerService } from './common/logger/logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+  
+  // Use custom logger
+  const logger = app.get(CustomLoggerService);
+  app.useLogger(logger);
+  
+  // Log environment configuration
+  logger.logEnvironment();
   
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -23,6 +30,6 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  console.log(`🚀 Server running on port ${port}`);
+  logger.log(`🚀 Server running on port ${port}`, 'Bootstrap');
 }
 bootstrap();

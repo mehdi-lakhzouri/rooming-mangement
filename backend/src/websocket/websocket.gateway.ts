@@ -6,6 +6,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
+import { CustomLoggerService } from '../common/logger/logger.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -17,12 +18,14 @@ import { Injectable } from '@nestjs/common';
 export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
+  constructor(private logger: CustomLoggerService) {}
+
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+    this.logger.logWebSocket(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+    this.logger.logWebSocket(`Client disconnected: ${client.id}`);
   }
 
   // Room events
